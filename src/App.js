@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DeckGL from '@deck.gl/react';
-import { BitmapLayer, LineLayer } from '@deck.gl/layers';
+import { BitmapLayer, LineLayer, IconLayer } from '@deck.gl/layers';
 import { MapView } from '@deck.gl/core';
 import { TileLayer } from '@deck.gl/geo-layers';
 import { makeStyles } from '@material-ui/core/styles';
@@ -35,6 +35,10 @@ const pointsDataGridColumns = [
   { field: 'ele', headerName: 'ele [m]', type: 'number', width: 80, sortable: false, },
 ];
 
+const ICON_MAPPING = {
+  marker: { x: 0, y: 0, width: 48, height: 48, anchorX: 24, anchorY: 48, mask: true }
+};
+
 const useStyles = makeStyles((theme) => ({
   root: {
     width: '100vw',
@@ -68,7 +72,9 @@ function App() {
   const [segments, setSegments] = useState([]);
   const [points, setPoints] = useState([]);
   const [currentSegment, setCurrentSegment] = useState(null);
+  const [currentPoint, setCurrentPoint] = useState(null);
   const [lineData, setLineData] = useState(null);
+  const [iconData, setIconData] = useState(null);
   const classes = useStyles();
 
   useEffect(() => {
@@ -82,6 +88,7 @@ function App() {
         setSegments([]);
         setPoints([]);
         setLineData(null);
+        setIconData(null);
       }
     })();
   }, [gpx]);
@@ -102,9 +109,25 @@ function App() {
 
       } else {
         setPoints([]);
+        setLineData(null);
+        setIconData(null);
       }
     })();
   }, [currentSegment]);
+
+  useEffect(() => {
+    (async () => {
+      if (gpx && (currentSegment === 0 || 0 < currentSegment) && (currentPoint === 0 || 0 < currentPoint)) {
+        const segments = gpx.track.segments;
+        const segment = segments[currentSegment];
+        const point = segment.points[currentPoint];
+        setIconData([{ coordinates: [point.lon, point.lat] }]);
+
+      } else {
+        setIconData(null);
+      }
+    })();
+  }, [currentPoint]);
 
 
   const handleOpen = (async (e) => {
@@ -180,7 +203,8 @@ function App() {
             headerHeight={30}
             rowHeight={30}
             hideFooterSelectedRowCount={true}
-            rowsPerPageOptions={[100, 500, 1000]} />
+            rowsPerPageOptions={[100, 500, 1000]}
+            onRowClick={(param, e) => { setCurrentPoint(param.row.id); }} />
         </Grid>
         <Grid item xs={12} className={classes.controllerGrid} >
           <input multiple accept="application/gpx+xml" id="open-gpx-file" type='file' hidden onChange={handleOpen} />
@@ -234,6 +258,18 @@ function App() {
             getTargetPosition={d => d.to}
             getWidth={1}
             getColor={d => (d.segmentId === currentSegment) ? [255, 0, 0] : [255, 127, 127]}
+          />
+
+          <IconLayer
+            id={'icon-layer'}
+            data={iconData}
+            iconAtlas={'baseline_place_black_48dp.png'}
+            iconMapping={ICON_MAPPING}
+            getIcon={d => 'marker'}
+            getPosition={d => d.coordinates}
+            sizeUnits={'pixels'}
+            sizeMinPixels={48}
+            getColor={d => [255, 0, 0]}
           />
 
           <MapView id="map" controller={true} repeat >
