@@ -2,6 +2,7 @@
   "name": "gpx-viewer",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@deck.gl/core": "^8.4.15",
     "@deck.gl/geo-layers": "^8.4.15",
